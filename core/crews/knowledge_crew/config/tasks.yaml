@@ -1,0 +1,10 @@
+knowledge_retrieval_task:
+  description: >
+    The user has a question: "{user_query}". 
+    Use the Knowledge Retrieval Tool to search the company's knowledge base for an answer. 
+    Synthesize the information from the retrieved documents into a clear, concise, and safety-focused response. 
+    State the source documents you used. If the information is not found, state that clearly.
+  expected_output: >
+    A concise answer to the user's question, citing the source documents. 
+    Example format: "Based on the Transformer Maintenance Manual (Page 5), you should..."
+  agent: knowledge_assistant

@@ -1,0 +1,28 @@
+# Django and Core
+django>=5.0
+asgiref>=3.7
+python-decouple>=3.8
+python-dotenv>=1.0
+
+# Database
+psycopg2-binary>=2.9
+
+# API
+djangorestframework>=3.14
+drf-spectacular>=0.27
+
+# AI & Orchestration
+crewai>=0.11.0
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langchain-groq>=0.1.0
+pydantic>=2.0
+
+# Files & Processing
+pillow>=10.0
+unstructured>=0.11
+python-magic>=0.4
+
+# Security / Utilities
+requests>=2.31
+twilio>=8.10

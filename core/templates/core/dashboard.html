@@ -1,0 +1,263 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard | Operations Copilot{% endblock %}
+{% block page_title %}Operations Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .stat-trend {
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .trend-up {
+        color: var(--success);
+    }
+
+    .trend-down {
+        color: var(--danger);
+    }
+
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 32px;
+    }
+
+    .recent-activity {
+        flex-grow: 1;
+    }
+
+    .activity-list {
+        list-style: none;
+        margin-top: 24px;
+    }
+
+    .activity-item {
+        padding: 20px 0;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    .activity-info {
+        flex-grow: 1;
+    }
+
+    .activity-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .activity-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .activity-status {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .task-card {
+        margin-bottom: 24px;
+    }
+
+    .risk-low {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+    }
+
+    .risk-medium {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent);
+    }
+
+    .risk-high {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+    }
+
+    .risk-critical {
+        background: var(--danger);
+        color: white;
+    }
+
+    .risk-knowledge {
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="card stat-card">
+        <div class="stat-header">
+            <span class="stat-label">Total Inspections</span>
+            <div class="stat-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
+                <i class="fa-solid fa-search"></i>
+            </div>
+        </div>
+        <div class="stat-value" id="total-inspections">{{ total_inspections }}</div>
+        <div class="stat-trend trend-up">
+            <i class="fa-solid fa-clock"></i> All-time total
+        </div>
+    </div>
+
+    <div class="card stat-card" id="emergency-card">
+        <div class="stat-header">
+            <span class="stat-label">Emergency Alerts</span>
+            <div class="stat-icon" style="background: rgba(var(--danger-rgb), 0.1); color: var(--danger);">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+        <div class="stat-value" id="emergency-count">{{ emergency_alerts }}</div>
+        <div class="stat-trend trend-down">
+            <i class="fa-solid fa-bolt"></i> Unresolved issues
+        </div>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-header">
+            <span class="stat-label">Knowledge Queries</span>
+            <div class="stat-icon" style="background: rgba(var(--success-rgb), 0.1); color: var(--success);">
+                <i class="fa-solid fa-lightbulb"></i>
+            </div>
+        </div>
+        <div class="stat-value" id="query-count">{{ knowledge_queries }}</div>
+        <div class="stat-trend trend-up">
+            <i class="fa-solid fa-brain"></i> AI Interactions
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-layout">
+    <div class="recent-activity">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Recent Activity</h3>
+            </div>
+
+            <ul class="activity-list">
+                {% for activity in activities %}
+                <li class="activity-item">
+                    <div class="activity-icon"
+                        style="background-color: var(--{{ activity.color }}); opacity: 0.15; color: var(--{{ activity.color }});">
+                        <i class="fa-solid {{ activity.icon }}"></i>
+                    </div>
+                    <div class="activity-info">
+                        <div class="activity-title">{{ activity.title }}</div>
+                        <div class="activity-meta">{{ activity.meta }} • {{ activity.timestamp|timesince }} ago</div>
+                    </div>
+                    <span class="activity-status risk-{{ activity.risk_class }}">{{ activity.status }}</span>
+                </li>
+                {% empty %}
+                <li class="activity-item">No recent activity found.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="card task-card">
+            <h3 style="margin-bottom: 20px;">System Status</h3>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="color: var(--text-muted);">Vision LLM</span>
+                    <span style="color: var(--success); font-weight: 600;">Operational</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="color: var(--text-muted);">Knowledge Base</span>
+                    <span style="color: var(--success); font-weight: 600;">Synced</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="color: var(--text-muted);">Multi-Agent Orchestrator</span>
+                    <span style="color: {{ orchestrator_color }}; font-weight: 600;">{{ orchestrator_status }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card"
+            style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;">
+            <h3 style="margin-bottom: 12px; font-weight: 600;">Emergency Mode</h3>
+            <p style="font-size: 13px; opacity: 0.9; margin-bottom: 20px;">Activate global emergency protocols for
+                grid-wide incidents.</p>
+            <button
+                style="width: 100%; padding: 12px; border: none; border-radius: 8px; background: white; color: var(--primary); font-weight: 700; cursor: pointer;">
+                ACTIVATE PROTOCOL
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+</script>
+{% endblock %}

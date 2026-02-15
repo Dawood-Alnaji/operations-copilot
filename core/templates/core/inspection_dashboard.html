@@ -1,0 +1,558 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Field Inspections | Operations Copilot{% endblock %}
+{% block page_title %}Equipment Inspection & Risk Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inspection-layout {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        gap: 32px;
+        height: calc(100vh - 200px);
+    }
+
+    .upload-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .results-panel {
+        overflow-y: auto;
+        padding-right: 12px;
+    }
+
+    .drop-zone {
+        border: 2px dashed var(--border);
+        border-radius: 20px;
+        padding: 40px 24px;
+        text-align: center;
+        background: var(--card-bg);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+        border-color: var(--primary);
+        background-color: rgba(37, 99, 235, 0.05);
+    }
+
+    .drop-zone i {
+        font-size: 48px;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+
+    .preview-container {
+        margin-top: 16px;
+        position: relative;
+        display: none;
+    }
+
+    #image-preview {
+        width: 100%;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .form-control {
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card-bg);
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+
+    .btn-primary:disabled {
+        background-color: var(--secondary);
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Analysis Results */
+    .analysis-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 32px;
+        display: none;
+    }
+
+    .analysis-header {
+        padding: 24px;
+        background: linear-gradient(135deg, var(--sidebar-bg), #0f172a);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .risk-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .risk-low {
+        background-color: var(--success);
+        color: white;
+    }
+
+    .risk-medium {
+        background-color: var(--accent);
+        color: white;
+    }
+
+    .risk-high {
+        background-color: #f97316;
+        color: white;
+    }
+
+    .risk-critical {
+        background-color: var(--danger);
+        color: white;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .analysis-body {
+        padding: 32px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title i {
+        color: var(--primary);
+    }
+
+    .analysis-text {
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--text-main);
+        margin-bottom: 24px;
+    }
+
+    .list-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    .analysis-list {
+        list-style: none;
+    }
+
+    .analysis-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+        font-size: 14px;
+    }
+
+    .analysis-list li:last-child {
+        border-bottom: none;
+    }
+
+    .warning-icon {
+        color: var(--danger);
+    }
+
+    .action-icon {
+        color: var(--success);
+    }
+
+    .checklist {
+        margin-top: 32px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+    }
+
+    .check-item {
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+    }
+
+    .status-yes {
+        color: var(--success);
+    }
+
+    .status-no {
+        color: var(--danger);
+    }
+
+    .status-unclear {
+        color: var(--secondary);
+    }
+
+    /* Empty state */
+    .empty-results {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-muted);
+        text-align: center;
+    }
+
+    .empty-results i {
+        font-size: 64px;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inspection-layout">
+    <div class="upload-panel">
+        <div class="card">
+            <h3 style="margin-bottom: 20px;">New Inspection</h3>
+
+            <div class="drop-zone" id="drop-zone">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Drag & drop equipment image here or click to browse</p>
+                <input type="file" id="file-input" hidden accept="image/*">
+            </div>
+
+            <div class="preview-container" id="preview-container">
+                <img id="image-preview" src="" alt="Preview">
+            </div>
+
+            <div class="form-group" style="margin-top: 24px;">
+                <label class="form-label">Equipment Type</label>
+                <select class="form-control" id="equipment-type">
+                    <option value="transformer">Transformer</option>
+                    <option value="cable">Power Cable</option>
+                    <option value="meter">Electricity Meter</option>
+                    <option value="pole">Utility Pole</option>
+                    <option value="switchgear">Switchgear</option>
+                    <option value="substation">Substation Equipment</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+                <label class="form-label">Location / Substation</label>
+                <input type="text" class="form-control" id="location" placeholder="e.g. Amman South Substation">
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+                <label class="form-label">Inspector Notes</label>
+                <textarea class="form-control" id="notes" rows="3" placeholder="Additional observations..."></textarea>
+            </div>
+
+            <button class="btn-primary" id="btn-analyze" style="margin-top: 24px; width: 100%;">
+                <i class="fas fa-microscope"></i>
+                Analyze Equipment
+            </button>
+        </div>
+    </div>
+
+    <div class="results-panel" id="results-panel">
+        <div class="empty-results" id="empty-state">
+            <i class="fas fa-robot"></i>
+            <h2>Ready to Analyze</h2>
+            <p>Upload an image to trigger multimodal AI diagnosis.</p>
+        </div>
+
+        <div id="loading-state" style="display: none; text-align: center; margin-top: 100px;">
+            <div class="typing-indicator" style="justify-content: center; gap: 10px;">
+                <div class="dot" style="width: 15px; height: 15px;"></div>
+                <div class="dot" style="width: 15px; height: 15px;"></div>
+                <div class="dot" style="width: 15px; height: 15px;"></div>
+            </div>
+            <h3 style="margin-top: 20px;">Analyzing Equipment via Multi-Agent System...</h3>
+            <p style="color: var(--text-muted);">Processing image and running specialized technical sub-agents</p>
+        </div>
+
+        <div class="analysis-card" id="analysis-card">
+            <div class="analysis-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-check-circle" style="font-size: 20px;"></i>
+                    <h2 id="analysis-title">Transformer Analysis</h2>
+                </div>
+                <span class="risk-badge" id="risk-badge">Low Risk</span>
+            </div>
+
+            <div class="analysis-body">
+                <div class="section-title">
+                    <i class="fas fa-info-circle"></i> Technical Assessment
+                </div>
+                <p class="analysis-text" id="technical-description"></p>
+
+                <div class="list-container">
+                    <div>
+                        <div class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i> Safety Warnings
+                        </div>
+                        <ul class="analysis-list" id="safety-warnings"></ul>
+                    </div>
+                    <div>
+                        <div class="section-title">
+                            <i class="fas fa-tools"></i> Recommended Actions
+                        </div>
+                        <ul class="analysis-list" id="recommended-actions"></ul>
+                    </div>
+                </div>
+
+                <div class="section-title" style="margin-top: 32px;">
+                    <i class="fas fa-clipboard-check"></i> Inspection Checklist
+                </div>
+                <div class="checklist" id="checklist"></div>
+
+                <div id="orchestration-logs"
+                    style="margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px;">
+                    <h3 style="font-size: 16px; margin-bottom: 20px;">Agent Reasoning Chain</h3>
+                    <div id="logs-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const previewContainer = document.getElementById('preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const btnAnalyze = document.getElementById('btn-analyze');
+
+    const emptyState = document.getElementById('empty-state');
+    const loadingState = document.getElementById('loading-state');
+    const analysisCard = document.getElementById('analysis-card');
+
+    // File Upload Handlers
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleFile(file);
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+        if (!file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imagePreview.src = e.target.result;
+            previewContainer.style.display = 'block';
+            dropZone.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    btnAnalyze.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) {
+            alert('Please upload an image first');
+            return;
+        }
+
+        // Prepare data
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('equipment_type', document.getElementById('equipment-type').value);
+        formData.append('location', document.getElementById('location').value);
+        formData.append('notes', document.getElementById('notes').value);
+        formData.append('analyze_immediately', 'true');
+
+        // UI State
+        emptyState.style.display = 'none';
+        analysisCard.style.display = 'none';
+        loadingState.style.display = 'block';
+        btnAnalyze.disabled = true;
+
+        try {
+            const response = await fetch('/api/operations/inspections/upload/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                displayResults(data);
+            } else {
+                alert(`Error: ${data.error || 'Failed to analyze'}`);
+                emptyState.style.display = 'flex';
+            }
+        } catch (error) {
+            console.error('Analysis failed:', error);
+            alert('Failed to connect to analysis server.');
+            emptyState.style.display = 'flex';
+        } finally {
+            loadingState.style.display = 'none';
+            btnAnalyze.disabled = false;
+        }
+    });
+
+    function displayResults(data) {
+        analysisCard.style.display = 'block';
+
+        // Header
+        document.getElementById('analysis-title').textContent = `${data.equipment_type.charAt(0).toUpperCase() + data.equipment_type.slice(1)} Analysis`;
+
+        const riskBadge = document.getElementById('risk-badge');
+        riskBadge.textContent = data.risk_classification_display;
+        riskBadge.className = `risk-badge risk-${data.risk_classification}`;
+
+        // Assessment
+        document.getElementById('technical-description').textContent = data.technical_description;
+
+        // Warnings
+        const warningList = document.getElementById('safety-warnings');
+        warningList.innerHTML = '';
+        data.safety_warnings.forEach(w => {
+            warningList.innerHTML += `<li><i class="fas fa-exclamation-circle warning-icon"></i> ${w}</li>`;
+        });
+
+        // Actions
+        const actionList = document.getElementById('recommended-actions');
+        actionList.innerHTML = '';
+        data.recommended_actions.forEach(a => {
+            actionList.innerHTML += `<li><i class="fas fa-chevron-right action-icon"></i> ${a}</li>`;
+        });
+
+        // Checklist
+        const checklist = document.getElementById('checklist');
+        checklist.innerHTML = '';
+        for (const [item, status] of Object.entries(data.inspection_checklist)) {
+            const label = item.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            let icon = '';
+            if (status === 'yes') icon = '<i class="fas fa-check-circle status-yes"></i>';
+            else if (status === 'no') icon = '<i class="fas fa-times-circle status-no"></i>';
+            else icon = '<i class="fas fa-question-circle status-unclear"></i>';
+
+            checklist.innerHTML += `
+                <div class="check-item">
+                    <span>${label}</span>
+                    ${icon}
+                </div>
+            `;
+        }
+
+        // Orchestration Logs (if available)
+        const logsContainer = document.getElementById('logs-container');
+        logsContainer.innerHTML = '';
+        if (data.agent_logs && data.agent_logs.length > 0) {
+            data.agent_logs.forEach(log => {
+                logsContainer.innerHTML += `
+                    <div style="background: rgba(0,0,0,0.02); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <strong style="color: var(--primary); font-size: 13px;">${log.agent_name_display}</strong>
+                            <span style="font-size: 11px; color: var(--text-muted);">${log.agent_role}</span>
+                        </div>
+                        <p style="font-size: 12px; line-height: 1.4;">Analysis step complete. Optimized for priority ${log.agent_output.priority || 'standard'}.</p>
+                    </div>
+                `;
+            });
+        } else {
+            logsContainer.innerHTML = '<p style="font-size: 12px; color: var(--text-muted);">Standard analysis mode invoked.</p>';
+        }
+
+        // Scroll into view
+        analysisCard.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
